@@ -22,7 +22,6 @@
 [1,"\r[3/3] index.qmd\n"]
 [1,"\r\n\r\nprocessing file: index.qmd\r\n1/3                  \r\n2/3 [unnamed-chunk-1]\r\n3/3                  \r\noutput file: index.knit.md\r\n\r\n"]
 [1,"\n"]
-[1,"Watching files for changes\nBrowse at http://localhost:7695/\n"]
+[1,"Watching files for changes\nBrowse at http://localhost:7700/\n"]
 [1,"GET: /\n"]
-[1,"GET: /about.html\n"]
 [1,"GET: /Gráficos.html\n"]

@@ -3,18 +3,29 @@ project:
   output-dir: docs
 
 website:
-  title: "Projeto"
+  title: "Controle Biológico de Nematóides"
   navbar:
     left:
       - href: index.qmd
-        text: Home
+        text: Projeto Final
       - about.qmd
       - href: Gráficos.qmd
         text: Análise exploratória
+        
+    right: 
+      - icon: github
+        menu: 
+          - text: Carlos Utiamada
+            href: https://github.com/carlosutiamada
+          - text: Fernanda Corbelli
+
+  back-to-top-navigation: true
 
 format:
   html:
-    theme: cosmo
+    theme:
+      light: flatly
+      dark: darkly
     css: styles.css
     toc: true
 
