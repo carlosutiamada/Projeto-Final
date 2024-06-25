@@ -31,16 +31,10 @@ library(corrplot)
 
 O primeiro passo para qualquer análise de dados é a importação dos dados que serão trabalhados. O nosso conjunto de dados foi importado por meio de um arquivo Excel (.xlsx) através da função `read_excel()` do pacote `readxl`. O nome atribuído ao data frame foi `controle`.
 
-Para a visualização geral dos dados foi utilizado a função `datatable()` do pacote `DT`, que permite interagir com o nosso conjunto de dados e até exportar diretamente para um arquivo Excel.
-
 ```{r}
 controle <- read_excel("Controle biológico.xlsx")
 
-datatable(controle,
-          extensions = 'Buttons',
-          options = list(
-            dom = 'Bfrtip',
-            buttons = c('copy', 'excel')))
+controle
 ```
 
 # Análise exploratória (visualização dos dados)
@@ -636,7 +630,7 @@ Novamente o p-valor da análise da relação entre as variáveis foi menor do qu
 Essa correlação mais forte entre as variáveis "MPAS" e "MRF" era, na verdade, já esperado por nós, uma vez que biologicamente existe uma correlação forte entre a massa da raiz e a massa da parte aérea, ou seja, já é esperado que uma planta que possua maior biomassa de raiz tenha uma maior biomassa da parte aérea.
 
 
-## Correlação entre todos
+## Correlação entre todas as variáveis
 
 É possível visualizar a correlação entre todas as variáveis resposta através de um único gráfico a partir da função ´corgraph()` do pacote `AgroR`. 
 
