@@ -1,0 +1,38 @@
+---
+title: "Introdução"
+warning: false
+message: false
+---
+
+# Localização do Experimento
+
+O projeto foi conduzido no Laboratório de Nematóides do Departamento de Fitopatologia da Universidade Federal de Viçosa (UFV), localizada no estado de Minas Gerais no Brasil.
+
+```{r, echo=FALSE}
+library(xfun)
+library(rmarkdown)
+library(knitr)
+library(rnaturalearth)
+library(rnaturalearthhires)
+library(tidyverse)
+
+latitude = -20.7546
+longitude = -42.8825
+dat <- data.frame(latitude, longitude)
+
+BRA <- ne_states(country = "Brazil", 
+                    returnclass = "sf")
+
+MG <- BRA |> 
+  filter(name_en=="Minas Gerais")
+
+ggplot(BRA) +
+geom_sf(color = "black",
+          fill = "white") +
+  geom_sf(data = MG, color = "black",
+            fill = "green")+
+    geom_point(data = dat, aes(longitude, latitude, 
+                               fill = "UFV"))+
+  labs(x = "Longitude", y = "Latitude", 
+         title = "Localização do experimento", fill = "")
+```

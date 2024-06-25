@@ -1,0 +1,603 @@
+---
+title: "Projeto 2"
+format: html
+warning: false
+message: false
+---
+
+Tirar o boxplot e trocar por jitter + errobar (desvio padrão) --\> poucas repetições Anova só com o grupo significativo (só tratamentou ou dose, trabalhar só com um fator) Dose usar como repetições por exemplo Sem regressão --\> considerar como categorico, não continuo Transformar log para a dose (por ser exponencial) Talvez montar apresentação Powwerpoint --\> Muitos dados
+
+# Pacotes utilizados
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(gsheet)
+library(performance)
+library(DHARMa)
+library(multcomp)
+library(multcompView)
+library(emmeans)
+library(MASS)
+library(AgroR)
+library(drc)
+library(corrplot)
+```
+
+# Importação do conjunto de dados
+
+```{r}
+controle <- read_excel("Controle biológico.xlsx")
+```
+
+# Análise exploratória (visualização dos dados)
+
+##Gráficos Boxplot usando "Dose" como fator e agrupando "Tratamento" por meio do `facet_wrap()`
+
+```{r}
+#Massa da parte aérea seca (MPAS)
+controle |> 
+  ggplot(aes(factor(Dose), `MPAS`, color = factor(Dose)))+
+  geom_boxplot()+
+  facet_wrap(~Trat)
+
+#Massa da raiz fresca (MRF)
+controle |> 
+  ggplot(aes(factor(Dose), `MRF`, color = factor(Dose)))+
+  geom_boxplot()+
+  facet_wrap(~Trat)
+
+#Número de ovos (ovos)
+controle |> 
+  ggplot(aes(factor(Dose), ovos, color = factor(Dose)))+
+  geom_boxplot()+
+  facet_wrap(~Trat)
+
+#Ovos/g (ovosg)
+controle |> 
+  ggplot(aes(factor(Dose), `ovosg`, color = factor(Dose)))+
+  geom_boxplot()+
+  facet_wrap(~Trat)
+```
+
+##Gráficos Boxplot usando "Tratamento" como fator e agrupando "Dose" por meio do `facet_wrap()`
+
+```{r}
+#Massa da parte aérea seca (MPAS)
+controle |> 
+  ggplot(aes(Trat, `MPAS`, color = factor(Trat)))+
+  geom_boxplot()+
+  facet_wrap(~Dose)
+
+#Massa da raiz fresca (MRF)
+controle |> 
+  ggplot(aes(Trat, `MRF`, color = factor(Trat)))+
+  geom_boxplot()+
+  facet_wrap(~Dose)
+
+#Número de ovos (ovos)
+controle |> 
+  ggplot(aes(Trat, ovos, color = factor(Trat)))+
+  geom_boxplot()+
+  facet_wrap(~Dose)
+
+#Ovos/g (ovosg)
+controle |> 
+  ggplot(aes(Trat, `ovosg`, color = factor(Trat)))+
+  geom_boxplot()+
+  facet_wrap(~Dose)
+```
+
+# Modelo fatorial (2-way ANOVA)
+
+##Análise de variância da variável "Massa da parte aérea seca" (MPAS)
+
+```{r}
+mf <- lm(MPAS ~ Trat*factor(Dose),
+         data = controle)
+mf
+
+anova(mf)
+summary(mf)
+
+#Checando as premissas
+plot(simulateResiduals(mf)) 
+check_normality(mf) #Não possui distribuição normal, no entanto podemos considerar como normal devido ao p-valor ser muito próximo do nível de significância (p = 0.045). Além disso a normalidade é menos importante que a homogeneidade das variâncias
+check_heteroscedasticity(mf)
+
+#Agrupamento dos dados em função da "Dose"
+mf_mpas <- emmeans(mf, ~ Trat|Dose)
+mf_mpas
+cld(mf_mpas)
+plot(cld(mf_mpas))
+
+#Agrupamento dos dados em função do "Tratamento"
+mf_mpas2 <- emmeans(mf, ~Dose|Trat)
+cld(mf_mpas2)
+plot(cld(mf_mpas2))
+#Não deu nenhuma diferença estatisticamente significativa entre as diferentes doses, não precisa fazer regressão
+```
+
+##Análise de variância da variável "Massa da raiz fresca" (MRF)
+
+```{r}
+mf2 <- lm(MRF ~ Trat*factor(Dose),
+         data = controle)
+mf2
+
+anova(mf2)
+summary(mf2)
+
+#Checando as premissas
+plot(simulateResiduals(mf2)) 
+check_normality(mf2)
+check_heteroscedasticity(mf2)
+
+#Agrupamento dos dados em função da "Dose"
+mf_mrf <- emmeans(mf2, ~ Trat|Dose)
+mf_mrf
+cld(mf_mrf)
+plot(cld(mf_mrf))
+
+#Agrupamento dos dados em função do "Tratamento"
+mf_mrf2 <- emmeans(mf2, ~Dose|Trat)
+cld(mf_mrf2)
+plot(cld(mf_mrf2))
+#Tratamento D apresentou diferença significativa, parece formar uma parabola --> Fazer regressão??
+```
+
+##Análise de variância da variável "Número de ovos" (ovos)
+
+```{r}
+mf3 <- lm(ovos ~ Trat*factor(Dose),
+         data = controle)
+mf3
+
+anova(mf3)
+summary(mf3)
+
+#Checando as premissas
+plot(simulateResiduals(mf3)) 
+check_normality(mf3)
+check_heteroscedasticity(mf3) # Variâncias heterogêneas
+
+#Transformação por Box-Cox
+b <- boxcox(lm(controle$ovos+0.1 ~ 1)) #A partir do "b" iremos extrair o lambda
+lambda <- b$x[which.max(b$y)]
+lambda #O valor lambda será usado na transformação
+
+controle$ovos2 <- (controle$ovos ^ lambda - 1)/ lambda
+controle$ovos2 #Depois de transformado, é feito os mesmos testes
+
+mf3.1 <- lm(ovos2 ~ Trat*factor(Dose),
+         data = controle)
+mf3.1
+
+anova(mf3.1)
+summary(mf3.1)
+
+#Checando novamente as premissas após transformação
+plot(simulateResiduals(mf3.1)) 
+check_normality(mf3.1)
+check_heteroscedasticity(mf3.1) #Variância homogênea
+
+controle <- controle |> 
+  mutate(ovos2 = (ovos^lambda - 1)/ lambda)
+
+#Agrupamento dos dados em função da "Dose"
+mf_ovos <- emmeans(mf3.1, ~ Trat|Dose)
+mf_ovos
+cld(mf_ovos)
+plot(cld(mf_ovos))
+
+#Agrupamento dos dados em função do "Tratamento"
+mf_ovos2 <- emmeans(mf3.1, ~Dose|Trat)
+cld(mf_ovos2)
+plot(cld(mf_ovos2))
+#Diferença significativa apenas no Tratamento B --> Fazer regressão
+```
+
+##Análise de variância da variável "Ovos/g" (ovosg)
+
+```{r}
+mf4 <- lm(ovosg ~ Trat*factor(Dose),
+         data = controle)
+mf4
+
+anova(mf4)
+summary(mf4)
+
+#Checando as premissas
+plot(simulateResiduals(mf4)) 
+check_normality(mf4)
+check_heteroscedasticity(mf4) #Variância heterogênea
+
+#Transformação por Box-Cox
+b2 <- boxcox(lm(controle$ovosg+0.1 ~ 1))
+lambda2 <- b2$x[which.max(b2$y)]
+lambda2
+
+controle$ovosg2 <- (controle$ovosg ^ lambda2 - 1)/ lambda2
+controle$ovosg2
+
+mf4.1 <- lm(ovosg2 ~ Trat*factor(Dose),
+         data = controle)
+mf4.1
+
+anova(mf4.1)
+summary(mf4.1)
+
+#Checando novamente as premissas após transformação
+plot(simulateResiduals(mf4.1)) 
+check_normality(mf4.1)
+check_heteroscedasticity(mf4.1) #Variâncias homogêneas
+
+#Agrupamento dos dados em função da "Dose"
+mf_ovosg <- emmeans(mf4.1, ~ Trat|Dose)
+mf_ovosg
+cld(mf_ovosg)
+plot(cld(mf_ovosg))
+
+#Agrupamento dos dados em função do "Tratamento"
+mf_ovosg2 <- emmeans(mf4.1, ~Dose|Trat)
+cld(mf_ovosg2)
+plot(cld(mf_ovosg2))
+#Diferença significativa apenas para Tratamento B
+```
+
+# Regressão
+
+## Regressão da variável "ovos" em função da "Dose"
+
+```{r}
+controle |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_jitter(width = 0.1, color = "gray")+
+  facet_wrap(~Trat)+
+  stat_summary(fun.data = "mean_cl_boot", color = "blue")+
+  geom_smooth(method = "lm", se = F) #se = F tira a banda de confiança
+
+controle |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_jitter(width = 0.1, color = "gray")+
+  facet_wrap(~Trat)+
+  stat_summary(fun.data = "mean_cl_boot", color = "blue")+
+  geom_smooth(se = F)
+```
+
+##Tratamento A
+
+```{r}
+trat1 <- controle |> 
+  filter(Trat == "A")
+
+#Gráfico sem ajustar modelo
+trat1 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(se = F)
+
+#Gráfico ajustando modelo linear e quadrático
+trat1 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(method = lm, se = FALSE,
+              formula = y ~poly(x,2))+ #Formula par ajustar os dados, modelo quadrático
+  geom_smooth(method = lm, se = F, color = "red") #Modelo linear
+
+#Gráfico ajustando modelo cúbico
+trat1 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(method = lm, se = FALSE,
+              formula = y ~poly(x,3)) #Formula par ajustar os dados, modelo cúbico
+
+trat1$Dose2 <- trat1$Dose^2
+trat1$Dose3 <- trat1$Dose^3
+
+#Primeira ordem - modelo linear
+lm1 <- lm(ovos2 ~ Dose,
+          data = trat1)
+summary(lm1)
+
+#Segunda ordem ou quadrático - modelo quadrático
+lm1.2 <- lm(ovos2 ~ Dose + Dose2,
+          data = trat1)
+summary(lm1.2) 
+
+#Terceira ordem - modelo cúbico
+lm1.3 <- lm(ovos2 ~ Dose + Dose2 + Dose3,
+          data = trat1)
+summary(lm1.3)
+
+#COmparação dos 3 modelos (menor valor = melhor modelo)
+AIC(lm1) #Menor valor
+AIC(lm1.2) 
+AIC(lm1.3)
+
+#Gráfico dos modelos com o valor de R-quadrado
+with(trat1, polynomial(Dose, ovos2, grau = 1))
+with(trat1, polynomial(Dose, ovos2, grau = 2)) #diferente do AIC, deu maior que o linear
+with(trat1, polynomial(Dose, ovos2, grau = 3)) #R2 = 1, teoricamente melhor, mas superestima o número de ovos
+
+
+#Testando modelo não-linear  --> NÃO DEU CERTO
+drc1 <- drm(ovos2 ~ Dose, data = trat1,  #drm é uma função que ajusta modelo não-linear
+            fct = LL.3()) #LL.3 = log-logistic de 3 parâmetros
+AIC(drc1) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
+plot(drc1) #Para visualizar se o ajuste está bom
+ED(drc1, 50, interval = "delta") #Estima o EC50 no valor 0.55 | O interval = delta fornece o intervalod de confiança
+
+drc1.1 <- drm(ovos2 ~ Dose, data = trat1,  #drm é uma função que ajusta modelo não-linear
+            fct = W1.3()) #LL.3 = log-logistic de 3 parâmetros
+AIC(drc1.1) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
+plot(drc1.1)
+```
+
+## Tratamento B
+
+```{r}
+trat2 <- controle |> 
+  filter(Trat == "B")
+
+#Gráfico sem ajustar modelo
+trat2 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(se = F)
+
+#Gráfico ajustando modelo linear e quadrático
+trat2 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(method = lm, se = FALSE,
+              formula = y ~poly(x,2))+
+  geom_smooth(method = lm, se = F, color = "red")
+
+#Gráfico ajustando modelo cúbico
+trat2 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(method = lm, se = FALSE,
+              formula = y ~poly(x,3))
+
+trat2$Dose2 <- trat2$Dose^2
+trat2$Dose3 <- trat2$Dose^3
+
+#Primeira ordem
+lm2 <- lm(ovos2 ~ Dose,
+          data = trat2)
+summary(lm2)
+
+#Segunda ordem ou quadrático
+lm2.2 <- lm(ovos2 ~ Dose + Dose2,
+          data = trat2)
+summary(lm2.2)
+
+#Terceira ordem
+lm2.3 <- lm(ovos2 ~ Dose + Dose2 + Dose3,
+          data = trat2)
+summary(lm2.3)
+
+#Comparação dos 3 modelos
+AIC(lm2)
+AIC(lm2.2) 
+AIC(lm2.3)#DEU O MENOR VALOR
+
+plot(simulateResiduals(lm2.3))
+check_normality(lm2.3)
+check_heteroscedasticity(lm2.3)
+
+#Gráfico dos modelos com o valor de R-quadrado
+with(trat2, polynomial(Dose, ovos2, grau = 2))
+with(trat2, polynomial(Dose, ovos2, grau = 3))
+
+#Testando modelo não-linear --> NÃO DEU CERTO
+drc2 <- drm(ovos2 ~ Dose, data = trat2,
+            fct = LL.3())
+AIC(drc2)
+plot(drc2)
+ED(drc2, 50, interval = "delta")
+
+drc2.1 <- drm(ovos2 ~ Dose, data = trat2,  #drm é uma função que ajusta modelo não-linear
+            fct = W1.3()) #LL.3 = log-logistic de 3 parâmetros
+AIC(drc2.1) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
+plot(drc2.1)
+```
+
+## Tratamento C
+
+```{r}
+trat3 <- controle |> 
+  filter(Trat == "C")
+
+#Gráfico sem ajustar modelo
+trat3 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(se = F)
+
+#Gráfico ajustando modelo linear e quadrático
+trat3 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(method = lm, se = FALSE,
+              formula = y ~poly(x,2))+ 
+  geom_smooth(method = lm, se = F, color = "red")
+
+#Gráfico ajustando modelo cúbico
+trat3 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(method = lm, se = FALSE,
+              formula = y ~poly(x,3))
+
+trat3$Dose2 <- trat3$Dose^2
+trat3$Dose3 <- trat3$Dose^3
+
+#Primeira ordem
+lm3 <- lm(ovos2 ~ Dose,
+          data = trat3)
+summary(lm3)
+
+#Segunda ordem ou quadrático
+lm3.2 <- lm(ovos2 ~ Dose + Dose2,
+          data = trat3)
+summary(lm3.2)
+
+#Terceira ordem
+lm3.3 <- lm(ovos2 ~ Dose + Dose2 + Dose3,
+          data = trat1)
+summary(lm3.3)
+
+#Comparando 3 modelos
+AIC(lm3) #Menor valor
+AIC(lm3.2) 
+AIC(lm3.3)
+
+#Gráfico dos modelos com o valor de R-quadrado
+with(trat3, polynomial(Dose, ovos2, grau = 1))
+with(trat3, polynomial(Dose, ovos2, grau = 2)) #diferente do AIC, deu maior que o linear
+with(trat3, polynomial(Dose, ovos2, grau = 3)) #R2 = 1, teoricamente melhor, mas superestima o número de ovos
+
+
+#Testando modelo não-linear  --> NÃO DEU CERTO
+drc3 <- drm(ovos2 ~ Dose, data = trat3,  #drm é uma função que ajusta modelo não-linear
+            fct = LL.3()) #LL.3 = log-logistic de 3 parâmetros
+AIC(drc3) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
+plot(drc3) #Para visualizar se o ajuste está bom
+ED(drc3, 50, interval = "delta") #Estima o EC50 no valor 0.55 | O interval = delta fornece o intervalod de confiança
+
+drc3.1 <- drm(ovos2 ~ Dose, data = trat3,  #drm é uma função que ajusta modelo não-linear
+            fct = W1.3()) #LL.3 = log-logistic de 3 parâmetros
+AIC(drc3.1) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
+plot(drc3.1)
+
+```
+
+## Tratamento D
+
+```{r}
+trat4 <- controle |> 
+  filter(Trat == "D")
+
+#Gráfico sem ajustar modelo
+trat4 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(se = F)
+
+#Gráfico ajustando modelo linear e quadrático
+trat4 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(method = lm, se = FALSE,
+              formula = y ~poly(x,2))+ 
+  geom_smooth(method = lm, se = F, color = "red")
+
+#Gráfico ajustando modelo cúbico
+trat4 |> 
+  ggplot(aes(Dose, ovos2))+
+  geom_point()+
+  geom_smooth(method = lm, se = FALSE,
+              formula = y ~poly(x,3))
+
+trat4$Dose2 <- trat4$Dose^2
+trat4$Dose3 <- trat4$Dose^3
+
+#Primeira ordem
+lm4 <- lm(ovos2 ~ Dose,
+          data = trat4)
+summary(lm4)
+
+#Segunda ordem ou quadrático
+lm4.2 <- lm(ovos2 ~ Dose + Dose2,
+          data = trat4)
+summary(lm4.2)
+
+#Terceira ordem
+lm4.3 <- lm(ovos2 ~ Dose + Dose2 + Dose3,
+          data = trat4)
+summary(lm4.3)
+
+#Comparando 3 modelos
+AIC(lm4) #Menor valor
+AIC(lm4.2) 
+AIC(lm4.3)
+
+#Gráfico dos modelos com o valor de R-quadrado
+with(trat4, polynomial(Dose, ovos2, grau = 1))
+with(trat4, polynomial(Dose, ovos2, grau = 2)) #diferente do AIC, deu maior que o linear (muito baixo)
+with(trat4, polynomial(Dose, ovos2, grau = 3)) #R2 = 1, teoricamente melhor, mas superestima o número de ovos
+
+
+#Testando modelo não-linear  --> NÃO DEU CERTO
+drc4 <- drm(ovos2 ~ Dose, data = trat4,  #drm é uma função que ajusta modelo não-linear
+            fct = LL.3()) #LL.3 = log-logistic de 3 parâmetros
+AIC(drc4) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
+plot(drc4) #Para visualizar se o ajuste está bom
+ED(drc4, 50, interval = "delta") #Estima o EC50 no valor 0.55 | O interval = delta fornece o intervalod de confiança
+
+drc4.1 <- drm(ovos2 ~ Dose, data = trat4,  #drm é uma função que ajusta modelo não-linear
+            fct = W1.3()) #LL.3 = log-logistic de 3 parâmetros
+AIC(drc4.1) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
+plot(drc4.1)
+```
+
+#Correlação entre as variaveis respostas (não fiz do ovos/g por ser redundante)
+
+```{r}
+controle |> 
+  ggplot(aes(ovos, MPAS))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  facet_wrap(~Trat)
+
+controle |> 
+  ggplot(aes(ovos, MRF))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  facet_wrap(~Trat)
+
+controle |> 
+  ggplot(aes(MPAS, MRF))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  facet_wrap(~Trat)
+
+#Correlação geral
+cor(controle$ovos, controle$MPAS) #Dá o valor do coeficiente de correlação
+cor.test(controle$ovos, controle$MPAS) #Mais completo, fornece o coeficiente de correlação, intervalo de confiança e p-valor (Ho : coeficiente de relação = 0)
+#Quanto maior a correlação, menor é o p-valor
+cor(controle$ovos, controle$MRF)
+cor.test(controle$ovos, controle$MRF)
+cor(controle$MPAS, controle$MRF)
+cor.test(controle$MPAS, controle$MRF)
+
+#Correlação Trat A
+cor.test(trat1$ovos, trat1$MPAS)
+cor.test(trat1$ovos, trat1$MRF)
+cor.test(trat1$MPAS, trat1$MRF)
+
+#Correlação Trat B
+cor.test(trat2$ovos, trat2$MPAS)
+cor.test(trat2$ovos, trat2$MRF)
+cor.test(trat2$MPAS, trat2$MRF)
+
+#Correlação Trat C
+cor.test(trat3$ovos, trat3$MPAS)
+cor.test(trat3$ovos, trat3$MRF)
+cor.test(trat3$MPAS, trat3$MRF)
+
+#Correlação Trat D
+cor.test(trat4$ovos, trat4$MPAS)
+cor.test(trat4$ovos, trat4$MRF)
+cor.test(trat4$MPAS, trat4$MRF)
+
+#Correlação entre todos
+controle2 <- controle[, c("ovos", "MPAS", "MRF")]
+corgraph(controle2)
+
+cor_controle2 <- cor(controle2)
+corrplot(cor_controle2, method = "number", type = "lower")
+```
