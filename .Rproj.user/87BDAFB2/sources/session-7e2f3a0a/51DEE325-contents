@@ -1,0 +1,170 @@
+---
+title: "Trabalho"
+format: html
+editor: visual
+---
+
+# Pré-análise
+
+## Pacotes
+
+Todos os pacotes utilizados durante o processo de análise foram carregados previamente. Além disso, foi atribuído o tema bw como padrão para as visualizações gráficas.
+
+```{r}
+theme_set(theme_bw())
+library(tidyverse)
+library(readxl)
+library(gsheet)
+library(performance)
+library(DHARMa)
+library(multcomp)
+library(multcompView)
+library(emmeans)
+library(MASS)
+library(AgroR)
+library(drc)
+library(corrplot)
+library(patchwork)
+```
+
+## Importação do conjunto de dados
+
+Os dados do experimento se encontravam em arquivo excel e para importar os dados foi utilizada a função read_excel do pacote readxl.
+
+```{r}
+
+controle <- read_excel("Controle biológico.xlsx.xlsx")
+ 
+```
+
+
+
+
+
+## Variável número de ovos por grama de raiz fresca
+
+-   Hipótese nula: o número de ovos por grama de raiz é semelhante para todos os tratamentos
+
+-   Hipótese alternativa: pelo menos um tratamento apresenta média do número de ovos por grama de raiz menor
+
+### Análise de variança (ANOVA)
+
+Os passos para a análise de variança foram seguidos de forma semelhante aos realizados anteriormente.
+
+#### Two-way ANOVA
+
+```{r}
+mf4 <- lm(ovosg ~ Trat*factor(Dose),
+         data = controle)
+anova(mf4)
+summary(mf4)
+```
+
+Baseado na tabela de anova, interpreta-se que o valor de "p" foi menor que o nível de significância (0,05) para a interação tratamento e dose e para o fator dose analisado individualmente.
+
+#### Checando as premissas
+
+```{r}
+plot(simulateResiduals(mf4)) 
+check_normality(mf4)
+check_heteroscedasticity(mf4) 
+```
+
+A premissa de normalidade dos dados foi atendida, no entanto as varianças não são homogênas. Dessa forma devemos transformar os dados.
+
+#### Transformação por Box-Cox
+
+```{r}
+b2 <- boxcox(lm(controle$ovosg+0.1 ~ 1))
+lambda2 <- b2$x[which.max(b2$y)]
+lambda2
+
+controle$ovosg2 <- (controle$ovosg ^ lambda2 - 1)/ lambda2
+controle$ovosg2
+```
+
+#### ANOVA fatorial com os dados transformados
+
+```{r}
+mf4.1 <- lm(ovosg2 ~ Trat*factor(Dose),
+         data = controle)
+
+anova(mf4.1)
+summary(mf4.1)
+```
+
+#### Checando novamente as premissas após transformação
+
+```{r}
+plot(simulateResiduals(mf4.1)) 
+check_normality(mf4.1)
+check_heteroscedasticity(mf4.1)
+```
+
+Ambas as premissas foram atendidas.
+
+#### Grupos distintos estatisticamente agrupados em função da dose
+
+```{r}
+mf_ovosg <- emmeans(mf4.1, ~ Trat|Dose)
+mf_ovosg
+cld(mf_ovosg)
+plot(cld(mf_ovosg))
+```
+
+Houve a formação de dois grupos distintos (1 e 2) entre os tratamentos nas doses de 10\^3 e 10\^4.
+
+#### Grupos distintos estatisticamente agrupados em função dos tratamentos
+
+```{r}
+mf_ovosg2 <- emmeans(mf4.1, ~Dose|Trat)
+cld(mf_ovosg2)
+plot(cld(mf_ovosg2))
+```
+
+Houve a formação de dois grupos distintos (1 e 2) entre as doses somente para o tratamento B
+
+NÃO SEI SE PRECISA FAZER SOMENTE PRA DOSE QUE TBM FOI SIGNIFICATIVO LA NA ANOVA TWO WAY
+
+```{r}
+
+mf44 <- lm(ovosg ~ factor(Dose),
+         data = controle)
+mf44
+
+anova(mf44)
+summary(mf44)
+
+plot(simulateResiduals(mf44)) 
+check_normality(mf44) 
+check_heteroscedasticity(mf44)
+
+mf_ovosg44 <- emmeans(mf44, ~Dose)
+cld(mf_ovosg44)
+plot(cld(mf_ovosg44))
+
+#Transformação por Box-Cox
+b4 <- boxcox(lm(controle$ovosg+0.1 ~ 1))
+lambda4 <- b4$x[which.max(b4$y)]
+lambda4
+
+controle$ovosg4 <- (controle$ovosg ^ lambda4 - 1)/ lambda4
+controle$ovosg4
+
+mf4.4 <- lm(ovosg4 ~ factor(Dose),
+         data = controle)
+mf4.4
+
+anova(mf4.4)
+summary(mf4.4)
+
+#Checando novamente as premissas após transformação
+plot(simulateResiduals(mf4.4)) 
+check_normality(mf4.4)
+check_heteroscedasticity(mf4.4)
+
+mf_ovosg4.4 <- emmeans(mf4.4, ~Dose)
+cld(mf_ovosg4.4)
+plot(cld(mf_ovosg4.4))
+
+```

@@ -5,17 +5,16 @@ warning: false
 message: false
 ---
 
-Tirar o boxplot e trocar por jitter + errobar (desvio padrão) --\> poucas repetições Anova só com o grupo significativo (só tratamentou ou dose, trabalhar só com um fator) Dose usar como repetições por exemplo Sem regressão --\> considerar como categorico, não continuo Transformar log para a dose (por ser exponencial) Talvez montar apresentação Powwerpoint --\> Muitos dados
+# Pré-análise
 
-# Pacotes utilizados
+## Pacotes utilizados
 
-Antes de dar o início ao nosso projeto, segue a lista abaixo de todos os pacotes que foram carregados previamente e utilizados durante a nossa análise de dados.
+Todos os pacotes utilizados durante o processo de análise foram carregados previamente.
 
 ```{r}
 library(tidyverse)
 library(readxl)
 library(gsheet)
-library(DT)
 library(performance)
 library(DHARMa)
 library(multcomp)
@@ -25,11 +24,12 @@ library(MASS)
 library(AgroR)
 library(drc)
 library(corrplot)
+library(patchwork)
 ```
 
-# Importação e Visualização do conjunto de dados
+# Importação do conjunto de dados
 
-O primeiro passo para qualquer análise de dados é a importação dos dados que serão trabalhados. O nosso conjunto de dados foi importado por meio de um arquivo Excel (.xlsx) através da função `read_excel()` do pacote `readxl`. O nome atribuído ao data frame foi `controle`.
+O primeiro passo para qualquer análise de dados é a importação dos dados que serão trabalhados. O conjunto de dados do experimento foi importado de um arquivo Excel (.xlsx) através da função `read_excel()` do pacote `readxl`. O nome atribuído ao data frame foi `controle`.
 
 ```{r}
 controle <- read_excel("Controle biológico.xlsx")
@@ -37,519 +37,446 @@ controle <- read_excel("Controle biológico.xlsx")
 controle
 ```
 
-# Análise exploratória (visualização dos dados)
+# Análise exploratória dos dados
 
-## Gráficos Boxplot usando "Dose" como fator e agrupando "Tratamento" por meio do `facet_wrap()`
+Para uma análise visual do conjunto de dados foi utilizado a função `ggplot()` do pacote `tidyverse` e diferentes formatos gráficos. Cada variável resposta foi visualizada de forma individual.
+
+**Gráfico de pontos**: O gráfico de pontos possibilita a visualização dos dados coletados de forma individualizada. Esse tipo de gráfico é recomendado quando cada tratamento apresenta poucas repetições, para que não seja um gráfico poluído. Como o conjunto de dados em questão apresenta somente 5 repetições, o gráfico de pontos pode ser utilizado. Para construir esse gráfico foi utilizado o `geom_jitter()`.
+
+**Gráfico de barra do erro**: O gráfico de barra do erro possibilita visualizar a variabilidade dos dados em cada grupo, podendo ser utilizado como referência o desvio padrão ou o erro padrão. Nesse caso, utilizamos o desvio padrão que descreve o quão próximos os valores observados estão da média. A função `stat_summary()` com o argumento `fun.data = "mean_sdl"` foram utilizados para gerar a barra do erro e a média dos dados.
+
+Para melhor visualização das variáveis respostas, utilizamos a "Dose" como um fator e adicionamos facetas com a função `facet_wrap()` para vizualizarmos os tratamentos separadamente.
+
+## Gráfico da massa da parte aérea seca (MPAS)
 
 ```{r}
-#Massa da parte aérea seca (MPAS)
 controle |> 
-  ggplot(aes(factor(Dose), `MPAS`, color = factor(Dose)))+
-  geom_boxplot()+
-  facet_wrap(~Trat)
+  ggplot(aes(factor(Dose), MPAS, color = factor(Dose)))+
+  geom_jitter(width = 0.05, color = "gray70")+
+  facet_wrap(~Trat)+
+  stat_summary(fun.data = "mean_sdl", fun.args = list(mult = 1))
+```
 
-#Massa da raiz fresca (MRF)
+## Gráfico da massa da raiz fresca (MRF)
+
+```{r}
 controle |> 
-  ggplot(aes(factor(Dose), `MRF`, color = factor(Dose)))+
-  geom_boxplot()+
-  facet_wrap(~Trat)
+  ggplot(aes(factor(Dose), MRF, color = factor(Dose)))+
+  geom_jitter(width = 0.05, color = "gray70")+
+  facet_wrap(~Trat)+
+  stat_summary(fun.data = "mean_sdl", fun.args = list(mult = 1))
+```
 
-#Número de ovos (ovos)
+## Gráfico do número de ovos por planta (ovos)
+
+```{r}
 controle |> 
   ggplot(aes(factor(Dose), ovos, color = factor(Dose)))+
-  geom_boxplot()+
-  facet_wrap(~Trat)
-
-#Ovos/g (ovosg)
-controle |> 
-  ggplot(aes(factor(Dose), `ovosg`, color = factor(Dose)))+
-  geom_boxplot()+
-  facet_wrap(~Trat)
+  geom_jitter(width = 0.05, color = "gray70")+
+  facet_wrap(~Trat)+
+  stat_summary(fun.data = "mean_sdl", fun.args = list(mult = 1))
 ```
 
-## Gráficos Boxplot usando "Tratamento" como fator e agrupando "Dose" por meio do `facet_wrap()`
+## Gráfico do número de ovos por grama de raiz fresca (ovosg)
 
 ```{r}
-#Massa da parte aérea seca (MPAS)
 controle |> 
-  ggplot(aes(Trat, `MPAS`, color = factor(Trat)))+
-  geom_boxplot()+
-  facet_wrap(~Dose)
-
-#Massa da raiz fresca (MRF)
-controle |> 
-  ggplot(aes(Trat, `MRF`, color = factor(Trat)))+
-  geom_boxplot()+
-  facet_wrap(~Dose)
-
-#Número de ovos (ovos)
-controle |> 
-  ggplot(aes(Trat, ovos, color = factor(Trat)))+
-  geom_boxplot()+
-  facet_wrap(~Dose)
-
-#Ovos/g (ovosg)
-controle |> 
-  ggplot(aes(Trat, `ovosg`, color = factor(Trat)))+
-  geom_boxplot()+
-  facet_wrap(~Dose)
+  ggplot(aes(factor(Dose), ovosg, color = factor(Dose)))+
+  geom_jitter(width = 0.05, color = "gray70")+
+  facet_wrap(~Trat)+
+  stat_summary(fun.data = "mean_sdl", fun.args = list(mult = 1))
 ```
 
-# Modelo fatorial (2-way ANOVA)
 
-##Análise de variância da variável "Massa da parte aérea seca" (MPAS)
+# Análise estatística e teste de hipóteses
+
+O conjunto de dados do experimento apresenta dois fatores: Tratamento e Dose. Desse modo, é preciso realizar a análise de variância de dois fatores (Two-Way ANOVA) para cada uma das quatro variáveis respostas. As hipóteses a serem testadas para cada uma das variáveis resposta são três hipóteses nulas e três hipóteses alternativas.
+
+## Variável massa da parte aérea seca (MPAS)
+
+-   **Hipótese nula 1 (H01)**: não há diferença na média da massa da parte aérea seca entre os diferentes níveis de Tratamento.
+-   **Hipótese alternativa 1 (Ha1)**: há pelo menos uma diferença na média da massa da parte aérea seca entre os diferentes níveis de Tratamento.
+-   **Hipótese nula 2 (H02)**: não há diferença na média da massa da parte aérea seca entre os diferentes níveis de Dose.
+-   **Hipótese alternativa 2 (Ha2)**: há pelo menos uma diferença na média da massa da parte aérea seca entre os diferentes níveis de Dose.
+-   **Hipótese nula 3 (H03)**: não há interação entre Tratamento e Dose. O efeito de Tratamento na massa da parte aérea seca é o mesmo para todas as Doses.
+-   **Hipótese alternativa 3 (Ha3)**: existe uma interação entre Tratamento e Dose. O efeito de Tratamento na massa da parte aérea seca depende da dose aplicada.
+
+### Análise de variância (ANOVA)
+
+Primeiramente foi realizada uma Two-Way ANOVA porque o conjunto de dados é um fatorial de tratamento e dose. Os dados foram primeiramente ajustados para o modelo de ANOVA usando a função `lm()`, a análise em si foi realizada utilizando a função `anova()`. A função `summary()` foi utilizada para visualização do resumo estatístico da ANOVA.
 
 ```{r}
 mf <- lm(MPAS ~ Trat*factor(Dose),
          data = controle)
-mf
 
 anova(mf)
 summary(mf)
-
-#Checando as premissas
-plot(simulateResiduals(mf)) 
-check_normality(mf) #Não possui distribuição normal, no entanto podemos considerar como normal devido ao p-valor ser muito próximo do nível de significância (p = 0.045). Além disso a normalidade é menos importante que a homogeneidade das variâncias
-check_heteroscedasticity(mf)
-
-#Agrupamento dos dados em função da "Dose"
-mf_mpas <- emmeans(mf, ~ Trat|Dose)
-mf_mpas
-cld(mf_mpas)
-plot(cld(mf_mpas))
-
-#Agrupamento dos dados em função do "Tratamento"
-mf_mpas2 <- emmeans(mf, ~Dose|Trat)
-cld(mf_mpas2)
-plot(cld(mf_mpas2))
-#Não deu nenhuma diferença estatisticamente significativa entre as diferentes doses, não precisa fazer regressão
 ```
 
-##Análise de variância da variável "Massa da raiz fresca" (MRF)
+Baseado na tabela de ANOVA, interpreta-se que o valor de “p” foi menor que o nível de significância (0,05) em relação aos tratamentos. Sendo assim, rejeita-se a hipótese nula **H01**. No entanto, o valor de "p" foi maior que o nível de significância (0,05) para a análise de dose e para a interação entre tratamento e dose. Dessa forma as hipóteses nulas **H02** e **H03** não são rejeitadas.
+
+Como há pelo menos uma diferença entre os níveis do tratamento, devemos refazer a análise de variância levando em consideração somente esse fator.
+
+```{r}
+mf1 <- lm(MPAS ~ Trat,
+         data = controle)
+
+anova(mf1)
+summary(mf1)
+```
+
+Baseado na nova tabela de ANOVA, interpreta-se que o valor de "p" foi menor que o nível de significância (0,05) e a hipótese nula deve ser rejeitada. Conclui-se então que pelo menos um dos tratamentos apresenta uma média com diferença estatística significativa na massa da parte aérea seca em relação aos outros tratamentos.
+
+#### Checagem das premissas
+
+Para verificar as premissas de normalidade e homocedasticidade das variâncias foi utilizada a função `check_` do pacote `performance`. A confirmação visual das premissas foi feita por meio da função `simulateResiduals()` do pacote `DHARMa`.
+
+```{r}
+hist(mf1$residuals)
+check_normality(mf1) 
+check_heteroscedasticity(mf1)
+plot(simulateResiduals(mf1)) 
+```
+
+Tanto a checagem pelas funções do `performance` quanto a análise visual pelo `DHARMa` indicaram que ambas as premissas foram atendidas.
+
+#### Grupos distintos estatisticamente
+
+Para verificar os tratamentos que são distintos estatisticamente, primeiramente foi calculado a média dos grupos pelo `emmeans()` e depois foi utilizada a função `cld` do pacote `multcomp`. E para visualizar de forma gráfica essa diferença foi utilizada a função `plot`.
+
+
+```{r}
+mf_mpas1 <- emmeans(mf1, ~Trat)
+cld(mf_mpas1)
+plot(cld(mf_mpas1))
+```
+
+Por essa análise houve a formação de dois grupos (1 e 2). Sendo o número 1 atribuído ao tratamento A, representando o tratamento com menor média da massa aérea seca. Já o número 2 foi atribuído ao tratamento D, representando o tratamento com maior média da massa aérea seca. Sendo assim, os tratamentos A e D são estatisticamente distintos.
+Os tratamentos B e C foram atribuidos como 12 e são estatisticamente semelhantes tanto em relação ao tratamento A quanto ao tratamento D.
+
+## Variável massa da raiz fresca (MRF)
+
+-   **Hipótese nula 1 (H01)**: não há diferença na média da massa da raiz fresca entre os diferentes níveis de Tratamento.
+-   **Hipótese alternativa 1 (Ha1)**: há pelo menos uma diferença na média da massa da raiz fresca entre os diferentes níveis de Tratamento.
+-   **Hipótese nula 2 (H02)**: não há diferença na média da massa da raiz fresca entre os diferentes níveis de Dose.
+-   **Hipótese alternativa 2 (Ha2)**: há pelo menos uma diferença na média da massa da raiz fresca entre os diferentes níveis de Dose.
+-   **Hipótese nula 3 (H03)**: não há interação entre Tratamento e Dose. O efeito de Tratamento na massa da raiz fresca é o mesmo para todas as Doses.
+-   **Hipótese alternativa 3 (Ha3)**: existe uma interação entre Tratamento e Dose. O efeito de Tratamento na massa da raiz fresca depende da dose aplicada.
+
+### Análise de variância (ANOVA)
+
+Os passos para a análise de variância foram seguidos de forma semlhante ao realizado para a variável MPAS.
 
 ```{r}
 mf2 <- lm(MRF ~ Trat*factor(Dose),
          data = controle)
-mf2
-
 anova(mf2)
 summary(mf2)
-
-#Checando as premissas
-plot(simulateResiduals(mf2)) 
-check_normality(mf2)
-check_heteroscedasticity(mf2)
-
-#Agrupamento dos dados em função da "Dose"
-mf_mrf <- emmeans(mf2, ~ Trat|Dose)
-mf_mrf
-cld(mf_mrf)
-plot(cld(mf_mrf))
-
-#Agrupamento dos dados em função do "Tratamento"
-mf_mrf2 <- emmeans(mf2, ~Dose|Trat)
-cld(mf_mrf2)
-plot(cld(mf_mrf2))
-#Tratamento D apresentou diferença significativa, parece formar uma parabola --> Fazer regressão??
 ```
 
-##Análise de variância da variável "Número de ovos" (ovos)
+Baseado na tabela de ANOVA, interpreta-se que o valor de "p" foi menor que o nível de significância (0,05) em relação aos tratamentos e as doses analisados de forma individual. No entanto, o valor de "p" foi maior que o nível de significância (0,05) para a interação entre tratamento e dose. Assim, devemos refazer a análise de variância levando em consideração somente os tratamentos distintos e, depois, somente as doses.
+
+### ANOVA em relação aos tratamentos
+
+```{r}
+mf21 <- lm(MRF ~ Trat,
+         data = controle)
+
+anova(mf21)
+summary(mf21)
+```
+
+Baseado na nova tabela de ANOVA, interpreta-se que o valor de "p" foi menor que o nível de significância (0,05) e a hipótese nula deve ser rejeitada. Conclui-se então que pelo menos um dos tratamentos apresenta diferença estatística significativa na média da massa da raiz fresca em relação aos outros tratamentos.
+
+#### Checagem das premissas
+
+```{r}
+plot(simulateResiduals(mf21)) 
+check_normality(mf21) 
+check_heteroscedasticity(mf21)
+```
+
+A análise visual pelo DHRAMa indicou que não havia problemas, no entanto, pela função `check_normality()` não houve normalidade dos resíduos. Assim, devemos transformar os dados.
+
+#### Transformação de Box-Cox
+
+Uma opção de transformação do conjunto de dados é por meio de box-cox. Nesse caso é encontrado um valor de lambda, que é o valor de X quando Y é máximo.
+
+```{r}
+b <- boxcox(lm(controle$MRF+0.1 ~ 1))
+lambda <- b$x[which.max(b$y)]
+lambda
+
+controle$MRF21 <- (controle$MRF ^ lambda - 1)/ lambda
+controle$MRF21
+```
+
+#### Anova com os dados transformados
+
+```{r}
+mf2.boxcox <- lm(MRF21 ~ Trat,
+         data = controle)
+
+anova(mf2.boxcox)
+summary(mf2.boxcox)
+```
+
+Foi observado um resultado similar à ANOVA realizada com os dados não transformados.
+
+#### Checando novamente as premissas após transformação
+
+```{r}
+plot(simulateResiduals(mf2.boxcox)) 
+check_normality(mf2.boxcox)
+check_heteroscedasticity(mf2.boxcox)
+```
+A premissa da homocedasticidade da variância foi atendida.
+
+#### Grupos distintos estatisticamente
+
+```{r}
+mf_mrf2.1 <- emmeans(mf2.boxcox, ~Trat)
+cld(mf_mrf2.1)
+plot(cld(mf_mrf2.1))
+```
+
+Por essa análise houve a formação de dois grupos (1 e 2). O número 1 foi atribuído ao tratamento A, representando o tratamento com a menor média da massa da raiz fresca. O número 2 foi atribuído ao tratamento D, representando o tratamento que possibilitou a maior média da massa da raiz fresca. Sendo assim, os tratamentos A e D são distintas estatisticamente para essa variável. Já os tratamentos B e C foram atribuidos como 12 e são estatisticamente semelhantes em relação aos demais.
+
+### ANOVA em relação as doses
+
+```{r}
+mf22 <- lm(MRF ~ factor(Dose),
+         data = controle)
+
+anova(mf22)
+summary(mf22)
+```
+
+Baseado na nova tabela de ANOVA, interpreta-se que o valor de "p" foi menor que o nível de significância (0,05) e a hipótese nula deve ser rejeitada. Conclui-se então que pelo menos uma das doses apresenta diferença estatística significativa na média da massa da raiz fresca em relação as outras doses.
+
+### Checagem das premissas
+
+```{r}
+plot(simulateResiduals(mf22)) 
+check_normality(mf22) 
+check_heteroscedasticity(mf22)
+```
+
+Ambas as premissas foram atendidas.
+
+#### Grupos distintos estatisticamente
+
+```{r}
+mf_mrf2.2 <- emmeans(mf22, ~Dose)
+cld(mf_mrf2.2)
+plot(cld(mf_mrf2.2))
+```
+
+Por essa análise houve a formação de dois grupos (1 e 2). O número 1 foi atribuído a dose 0, representando a dose com menor média da massa da raiz fresca. O número 2 foi atribuído a dose 100.000, representando a dose que possibilitou a maior média da massa da raiz fresca. Sendo assim, as doses 0 e 100.000 são distintas estatisticamente para essa variável. As doses 1.000 e 10.000 foram atribuidos como 12 e são estatisticamente semelhantes em relação a dose 0 e a dose 100.000.
+
+
+## Variável número de ovos por planta
+
+-   **Hipótese nula 1 (H01)**: não há diferença na média do número de ovos por planta entre os diferentes níveis de Tratamento.
+-   **Hipótese alternativa 1 (Ha1)**: há pelo menos uma diferença na média do número de ovos por planta entre os diferentes níveis de Tratamento.
+-   **Hipótese nula 2 (H02)**: não há diferença na média do número de ovos por planta entre os diferentes níveis de Dose.
+-   **Hipótese alternativa 2 (Ha2)**: há pelo menos uma diferença na média do número de ovos por planta entre os diferentes níveis de Dose.
+-   **Hipótese nula 3 (H03)**: não há interação entre Tratamento e Dose. O efeito de Tratamento no número de ovos por planta é o mesmo para todas as Doses.
+-   **Hipótese alternativa 3 (Ha3)**: existe uma interação entre Tratamento e Dose. O efeito de Tratamento no número de ovos por planta depende da dose aplicada.
+
+### Análise de variância (ANOVA)
+
+Os passos para a análise de variância foram seguidos de forma semelhante aos realizados anteriormente.
 
 ```{r}
 mf3 <- lm(ovos ~ Trat*factor(Dose),
          data = controle)
-mf3
 
 anova(mf3)
 summary(mf3)
-
-#Checando as premissas
-plot(simulateResiduals(mf3)) 
-check_normality(mf3)
-check_heteroscedasticity(mf3) # Variâncias heterogêneas
-
-#Transformação por Box-Cox
-b <- boxcox(lm(controle$ovos+0.1 ~ 1)) #A partir do "b" iremos extrair o lambda
-lambda <- b$x[which.max(b$y)]
-lambda #O valor lambda será usado na transformação
-
-controle$ovos2 <- (controle$ovos ^ lambda - 1)/ lambda
-controle$ovos2 #Depois de transformado, é feito os mesmos testes
-
-mf3.1 <- lm(ovos2 ~ Trat*factor(Dose),
-         data = controle)
-mf3.1
-
-anova(mf3.1)
-summary(mf3.1)
-
-#Checando novamente as premissas após transformação
-plot(simulateResiduals(mf3.1)) 
-check_normality(mf3.1)
-check_heteroscedasticity(mf3.1) #Variância homogênea
-
-controle <- controle |> 
-  mutate(ovos2 = (ovos^lambda - 1)/ lambda)
-
-#Agrupamento dos dados em função da "Dose"
-mf_ovos <- emmeans(mf3.1, ~ Trat|Dose)
-mf_ovos
-cld(mf_ovos)
-plot(cld(mf_ovos))
-
-#Agrupamento dos dados em função do "Tratamento"
-mf_ovos2 <- emmeans(mf3.1, ~Dose|Trat)
-cld(mf_ovos2)
-plot(cld(mf_ovos2))
-#Diferença significativa apenas no Tratamento B --> Fazer regressão
 ```
 
-##Análise de variância da variável "Ovos/g" (ovosg)
+Baseado na tabela de ANOVA, interpreta-se que o valor de “p” foi menor que o nível de significância (0,05) somente em relação às doses analisados de forma individual. Assim, rejeitamos a hipótese nula **H02** e não rejeitamos as demais hipóteses nulas. Dessa forma, devemos refazer a análise de variância levando em consideração somente as doses.
+
+```{r}
+mf31 <- lm(ovos ~ factor(Dose),
+         data = controle)
+
+anova(mf31)
+summary(mf31)
+```
+
+Baseado na nova tabela de ANOVA, interpreta-se que o valor de "p" foi menor que o nível de significância (0,05) e a hipótese nula deve ser rejeitada. Conclui-se então que pelo menos uma das doses proporciona uma média no número de ovos por planta com diferença estatística significativa em relação as outras doses.
+
+#### Checagem das premissas
+
+```{r}
+plot(simulateResiduals(mf31)) 
+check_normality(mf31) 
+check_heteroscedasticity(mf31)
+```
+
+Ambas as premissas foram atendidas.
+
+#### Grupos distintos estatisticamente
+
+```{r}
+mf_ovos3 <- emmeans(mf31, ~Dose)
+cld(mf_ovos3)
+plot(cld(mf_ovos3))
+```
+
+Por essa análise houve a formação de dois grupos (1 e 2). O número 1 foi atribuído a dose 1.000, representando a dose com menor média no número de ovos por planta. Já o número 2 foi atribuído as doses 10.000 e 100.000, sendo, então, as doses que propiciaram as maiores médias no número de ovos por planta. A dose 0 foi atribuida como 12, sendo estatisticamente semelhante as demais doses. Em resumo, não houve, estatisticamente, uma redução no número de ovos pelas doses das actinobactérias em relação a testemunha.
+
+## Variável número de ovos por grama de raiz fresca
+
+-   **Hipótese nula 1 (H01)**: não há diferença na média do número de ovos por grama de raiz fresca entre os diferentes níveis de Tratamento.
+-   **Hipótese alternativa 1 (Ha1)**: há pelo menos uma diferença na média do número de ovos por grama de raiz fresca entre os diferentes níveis de Tratamento.
+-   **Hipótese nula 2 (H02)**: não há diferença na média do número de ovos por grama de raiz fresca entre os diferentes níveis de Dose.
+-   **Hipótese alternativa 2 (Ha2)**: há pelo menos uma diferença na média do número de ovos por grama de raiz fresca entre os diferentes níveis de Dose.
+-   **Hipótese nula 3 (H03)**: não há interação entre Tratamento e Dose. O efeito de Tratamento no número de ovos por grama de raiz fresca é o mesmo para todas as Doses.
+-   **Hipótese alternativa 3 (Ha3)**: existe uma interação entre Tratamento e Dose. O efeito de Tratamento no número de ovos por grama de raiz fresca depende da dose aplicada.
+
+### Análise de variância (ANOVA)
+
+Os passos para a análise de variância foram seguidos de forma semelhante aos realizados anteriormente.
 
 ```{r}
 mf4 <- lm(ovosg ~ Trat*factor(Dose),
          data = controle)
-mf4
-
 anova(mf4)
 summary(mf4)
+```
 
-#Checando as premissas
+Baseado na tabela de ANOVA, interpreta-se que o valor de “p” foi menor que o nível de significância (0,05) para a interação tratamento e dose e para o fator dose analisado individualmente. Sendo assim, rejeitamos as hipóteses nulas **H02** e **H03** e não rejeitamos a hipótese nula **H01**. A análise de variância fatorial pode, então, ser prosseguida.
+
+#### Checando as premissas
+
+```{r}
 plot(simulateResiduals(mf4)) 
 check_normality(mf4)
-check_heteroscedasticity(mf4) #Variância heterogênea
+check_heteroscedasticity(mf4) 
+```
 
-#Transformação por Box-Cox
+A premissa de normalidade dos dados foi atendida, no entanto as varianças não são homogêneas. Dessa forma, devemos transformar os dados.
+
+#### Transformação por Box-Cox
+
+```{r}
 b2 <- boxcox(lm(controle$ovosg+0.1 ~ 1))
 lambda2 <- b2$x[which.max(b2$y)]
 lambda2
 
 controle$ovosg2 <- (controle$ovosg ^ lambda2 - 1)/ lambda2
 controle$ovosg2
+```
 
+#### ANOVA fatorial com os dados transformados
+
+```{r}
 mf4.1 <- lm(ovosg2 ~ Trat*factor(Dose),
          data = controle)
-mf4.1
 
 anova(mf4.1)
 summary(mf4.1)
+```
+Os resultados obtidos foram similares à ANOVA dos dados não transformados.
 
-#Checando novamente as premissas após transformação
+#### Checando novamente as premissas após transformação
+
+```{r}
 plot(simulateResiduals(mf4.1)) 
 check_normality(mf4.1)
-check_heteroscedasticity(mf4.1) #Variâncias homogêneas
+check_heteroscedasticity(mf4.1)
+```
 
-#Agrupamento dos dados em função da "Dose"
+Ambas as premissas foram atendidas.
+
+#### Grupos distintos estatisticamente agrupados em função da Dose
+
+```{r}
 mf_ovosg <- emmeans(mf4.1, ~ Trat|Dose)
-mf_ovosg
 cld(mf_ovosg)
 plot(cld(mf_ovosg))
+```
 
-#Agrupamento dos dados em função do "Tratamento"
+Houve diferença estatistica entre os tratamentos nas doses de 1.000 e 10.000. Em ambas as doses houve a formação de dois grupos distintos (1 e 2).
+
+Na menor dose, o tratamento B foi atribuído ao número 1 e apresentou a menor média no número de ovos por grama de raiz. Os tratamentos A e C foram representados pelo número 2 e propiciaram, então, as maiores médias no número de ovos por grama de raiz. O tratamento D foi atribuído como 12 e, assim, não apresenta diferença estatística para os demais tratamentos nessa dose. 
+
+Já na dose 10.000, o tratamento D foi atribuído ao número 1 e apresentou a menor média no número de ovos por grama de raiz. O número 2 foi atribuído ao tratamento B, representando, então, a maior média no número de ovos por grama de raiz. E os tratamentos A e C foram representados como 12 e, assim, não apresentam diferença estatística para os demais tratamentos nessa dose.
+
+#### Grupos distintos estatisticamente agrupados em função dos Tratamentos
+
+```{r}
 mf_ovosg2 <- emmeans(mf4.1, ~Dose|Trat)
 cld(mf_ovosg2)
 plot(cld(mf_ovosg2))
-#Diferença significativa apenas para Tratamento B
 ```
+
+Houve diferença estatística entre as doses somente para o tratamento B com a formação de dois grupos distintos (1 e 2).
+A dose 1.000 foi atribuída ao número 1 e representa a menor média no número de ovos por grama de raiz. Já as demais doses foram representadas pelo número 2, apresentando uma média no número de ovos por grama de raiz superior a encontrada pela dose 1.000. Sendo assim, houve o controle do nematoide pelo número de ovos por grama de raiz somente no tratamento B na dose de 1.000.
+
 
 # Regressão
 
-## Regressão da variável "ovos" em função da "Dose"
+A regressão é uma técnica estatística utilizada para modelar e analisar a relação entre uma variável dependente (ou resposta) e uma ou mais variáveis independentes (ou preditoras). O objetivo principal da regressão é entender como a variável dependente varia quando as variáveis independentes mudam e usar essa compreensão para fazer previsões.
+
+Com o conjunto de dados do experimento, foi analisado a relação entre a variável resposta do número de ovos por planta com os diferentes níveis de dose de actinobactérias.
+
+Como ponto de partida, foi construído um gráfico pelo `ggplot()` usando em conjunto a função `geom_smooth(method = "lm")` para observar a linha de tendência da dispersão dos pontos.
 
 ```{r}
 controle |> 
-  ggplot(aes(Dose, ovos2))+
+  ggplot(aes(Dose, ovos))+
   geom_jitter(width = 0.1, color = "gray")+
-  facet_wrap(~Trat)+
   stat_summary(fun.data = "mean_cl_boot", color = "blue")+
-  geom_smooth(method = "lm", se = F) #se = F tira a banda de confiança
+  geom_smooth(method = "lm", se = F)
+```
 
+Com esse gráfico podemos observar que a distância entre os valores da Dose é de uma escala exponencial, o que dificulta a visualização e a compreensão do gráfico. Por esse motivo, o fator Dose foi transformado por log(x + 0.5), de forma a "encurtar" o espaço entre os dados e facilitar a sua análise.
+
+```{r}
 controle |> 
-  ggplot(aes(Dose, ovos2))+
+  ggplot(aes(log(Dose+0.5), ovos))+
   geom_jitter(width = 0.1, color = "gray")+
-  facet_wrap(~Trat)+
+  stat_summary(fun.data = "mean_cl_boot", color = "blue")+
+  geom_smooth(method = "lm", se = F)
+```
+
+Observando o gráfico podemos perceber que o ajuste com o modelo linear não aparenta representar o nosso conjunto de dados. Ao retirarmos o ajuste, temos o seguinte gráfico:
+
+```{r}
+controle |> 
+  ggplot(aes(log(Dose+0.5), ovos))+
+  geom_jitter(width = 0.1, color = "gray")+
   stat_summary(fun.data = "mean_cl_boot", color = "blue")+
   geom_smooth(se = F)
 ```
 
-##Tratamento A
+Para comparar tanto o modelo linear quanto o modelo quadrático, pode ser feito um gráfico que contenha os dois modelos juntos:
 
 ```{r}
-trat1 <- controle |> 
-  filter(Trat == "A")
-
-#Gráfico sem ajustar modelo
-trat1 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(se = F)
-
-#Gráfico ajustando modelo linear e quadrático
-trat1 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(method = lm, se = FALSE,
-              formula = y ~poly(x,2))+ #Formula par ajustar os dados, modelo quadrático
-  geom_smooth(method = lm, se = F, color = "red") #Modelo linear
-
-#Gráfico ajustando modelo cúbico
-trat1 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(method = lm, se = FALSE,
-              formula = y ~poly(x,3)) #Formula par ajustar os dados, modelo cúbico
-
-trat1$Dose2 <- trat1$Dose^2
-trat1$Dose3 <- trat1$Dose^3
-
-#Primeira ordem - modelo linear
-lm1 <- lm(ovos2 ~ Dose,
-          data = trat1)
-summary(lm1)
-
-#Segunda ordem ou quadrático - modelo quadrático
-lm1.2 <- lm(ovos2 ~ Dose + Dose2,
-          data = trat1)
-summary(lm1.2) 
-
-#Terceira ordem - modelo cúbico
-lm1.3 <- lm(ovos2 ~ Dose + Dose2 + Dose3,
-          data = trat1)
-summary(lm1.3)
-
-#COmparação dos 3 modelos (menor valor = melhor modelo)
-AIC(lm1) #Menor valor
-AIC(lm1.2) 
-AIC(lm1.3)
-
-#Gráfico dos modelos com o valor de R-quadrado
-with(trat1, polynomial(Dose, ovos2, grau = 1))
-with(trat1, polynomial(Dose, ovos2, grau = 2)) #diferente do AIC, deu maior que o linear
-with(trat1, polynomial(Dose, ovos2, grau = 3)) #R2 = 1, teoricamente melhor, mas superestima o número de ovos
-
-
-#Testando modelo não-linear  --> NÃO DEU CERTO
-drc1 <- drm(ovos2 ~ Dose, data = trat1,  #drm é uma função que ajusta modelo não-linear
-            fct = LL.3()) #LL.3 = log-logistic de 3 parâmetros
-AIC(drc1) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
-plot(drc1) #Para visualizar se o ajuste está bom
-ED(drc1, 50, interval = "delta") #Estima o EC50 no valor 0.55 | O interval = delta fornece o intervalod de confiança
-
-drc1.1 <- drm(ovos2 ~ Dose, data = trat1,  #drm é uma função que ajusta modelo não-linear
-            fct = W1.3()) #LL.3 = log-logistic de 3 parâmetros
-AIC(drc1.1) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
-plot(drc1.1)
-```
-
-## Tratamento B
-
-```{r}
-trat2 <- controle |> 
-  filter(Trat == "B")
-
-#Gráfico sem ajustar modelo
-trat2 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(se = F)
-
-#Gráfico ajustando modelo linear e quadrático
-trat2 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
+controle |> 
+  ggplot(aes(log(Dose+0.5), ovos))+
+  geom_jitter(width = 0.1, color = "gray")+
+  stat_summary(fun.data = "mean_cl_boot", color = "blue")+
   geom_smooth(method = lm, se = FALSE,
               formula = y ~poly(x,2))+
   geom_smooth(method = lm, se = F, color = "red")
 
-#Gráfico ajustando modelo cúbico
-trat2 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(method = lm, se = FALSE,
-              formula = y ~poly(x,3))
 
-trat2$Dose2 <- trat2$Dose^2
-trat2$Dose3 <- trat2$Dose^3
-
-#Primeira ordem
-lm2 <- lm(ovos2 ~ Dose,
-          data = trat2)
-summary(lm2)
-
-#Segunda ordem ou quadrático
-lm2.2 <- lm(ovos2 ~ Dose + Dose2,
-          data = trat2)
-summary(lm2.2)
-
-#Terceira ordem
-lm2.3 <- lm(ovos2 ~ Dose + Dose2 + Dose3,
-          data = trat2)
-summary(lm2.3)
-
-#Comparação dos 3 modelos
-AIC(lm2)
-AIC(lm2.2) 
-AIC(lm2.3)#DEU O MENOR VALOR
-
-plot(simulateResiduals(lm2.3))
-check_normality(lm2.3)
-check_heteroscedasticity(lm2.3)
-
-#Gráfico dos modelos com o valor de R-quadrado
-with(trat2, polynomial(Dose, ovos2, grau = 2))
-with(trat2, polynomial(Dose, ovos2, grau = 3))
-
-#Testando modelo não-linear --> NÃO DEU CERTO
-drc2 <- drm(ovos2 ~ Dose, data = trat2,
-            fct = LL.3())
-AIC(drc2)
-plot(drc2)
-ED(drc2, 50, interval = "delta")
-
-drc2.1 <- drm(ovos2 ~ Dose, data = trat2,  #drm é uma função que ajusta modelo não-linear
-            fct = W1.3()) #LL.3 = log-logistic de 3 parâmetros
-AIC(drc2.1) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
-plot(drc2.1)
 ```
 
-## Tratamento C
+Pelo gráfico pode-se observar que, embora também não represente perfeitamente o conjunto de dados, o modelo quadrático é melhor que o modelo linear para explicar a relação entre a variável resposta do número de ovos por planta com a Dose.
+
+A fim de comparar os dois modelos, pode ser utilizado a função `polynomial()` do pacote `AgroR`.
 
 ```{r}
-trat3 <- controle |> 
-  filter(Trat == "C")
-
-#Gráfico sem ajustar modelo
-trat3 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(se = F)
-
-#Gráfico ajustando modelo linear e quadrático
-trat3 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(method = lm, se = FALSE,
-              formula = y ~poly(x,2))+ 
-  geom_smooth(method = lm, se = F, color = "red")
-
-#Gráfico ajustando modelo cúbico
-trat3 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(method = lm, se = FALSE,
-              formula = y ~poly(x,3))
-
-trat3$Dose2 <- trat3$Dose^2
-trat3$Dose3 <- trat3$Dose^3
-
-#Primeira ordem
-lm3 <- lm(ovos2 ~ Dose,
-          data = trat3)
-summary(lm3)
-
-#Segunda ordem ou quadrático
-lm3.2 <- lm(ovos2 ~ Dose + Dose2,
-          data = trat3)
-summary(lm3.2)
-
-#Terceira ordem
-lm3.3 <- lm(ovos2 ~ Dose + Dose2 + Dose3,
-          data = trat1)
-summary(lm3.3)
-
-#Comparando 3 modelos
-AIC(lm3) #Menor valor
-AIC(lm3.2) 
-AIC(lm3.3)
-
-#Gráfico dos modelos com o valor de R-quadrado
-with(trat3, polynomial(Dose, ovos2, grau = 1))
-with(trat3, polynomial(Dose, ovos2, grau = 2)) #diferente do AIC, deu maior que o linear
-with(trat3, polynomial(Dose, ovos2, grau = 3)) #R2 = 1, teoricamente melhor, mas superestima o número de ovos
-
-
-#Testando modelo não-linear  --> NÃO DEU CERTO
-drc3 <- drm(ovos2 ~ Dose, data = trat3,  #drm é uma função que ajusta modelo não-linear
-            fct = LL.3()) #LL.3 = log-logistic de 3 parâmetros
-AIC(drc3) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
-plot(drc3) #Para visualizar se o ajuste está bom
-ED(drc3, 50, interval = "delta") #Estima o EC50 no valor 0.55 | O interval = delta fornece o intervalod de confiança
-
-drc3.1 <- drm(ovos2 ~ Dose, data = trat3,  #drm é uma função que ajusta modelo não-linear
-            fct = W1.3()) #LL.3 = log-logistic de 3 parâmetros
-AIC(drc3.1) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
-plot(drc3.1)
-
+with(controle, polynomial(log(Dose+0.5), ovos, grau = 1))
+with(controle, polynomial(log(Dose+0.5), ovos, grau = 2))
 ```
 
-## Tratamento D
-
-```{r}
-trat4 <- controle |> 
-  filter(Trat == "D")
-
-#Gráfico sem ajustar modelo
-trat4 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(se = F)
-
-#Gráfico ajustando modelo linear e quadrático
-trat4 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(method = lm, se = FALSE,
-              formula = y ~poly(x,2))+ 
-  geom_smooth(method = lm, se = F, color = "red")
-
-#Gráfico ajustando modelo cúbico
-trat4 |> 
-  ggplot(aes(Dose, ovos2))+
-  geom_point()+
-  geom_smooth(method = lm, se = FALSE,
-              formula = y ~poly(x,3))
-
-trat4$Dose2 <- trat4$Dose^2
-trat4$Dose3 <- trat4$Dose^3
-
-#Primeira ordem
-lm4 <- lm(ovos2 ~ Dose,
-          data = trat4)
-summary(lm4)
-
-#Segunda ordem ou quadrático
-lm4.2 <- lm(ovos2 ~ Dose + Dose2,
-          data = trat4)
-summary(lm4.2)
-
-#Terceira ordem
-lm4.3 <- lm(ovos2 ~ Dose + Dose2 + Dose3,
-          data = trat4)
-summary(lm4.3)
-
-#Comparando 3 modelos
-AIC(lm4) #Menor valor
-AIC(lm4.2) 
-AIC(lm4.3)
-
-#Gráfico dos modelos com o valor de R-quadrado
-with(trat4, polynomial(Dose, ovos2, grau = 1))
-with(trat4, polynomial(Dose, ovos2, grau = 2)) #diferente do AIC, deu maior que o linear (muito baixo)
-with(trat4, polynomial(Dose, ovos2, grau = 3)) #R2 = 1, teoricamente melhor, mas superestima o número de ovos
-
-
-#Testando modelo não-linear  --> NÃO DEU CERTO
-drc4 <- drm(ovos2 ~ Dose, data = trat4,  #drm é uma função que ajusta modelo não-linear
-            fct = LL.3()) #LL.3 = log-logistic de 3 parâmetros
-AIC(drc4) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
-plot(drc4) #Para visualizar se o ajuste está bom
-ED(drc4, 50, interval = "delta") #Estima o EC50 no valor 0.55 | O interval = delta fornece o intervalod de confiança
-
-drc4.1 <- drm(ovos2 ~ Dose, data = trat4,  #drm é uma função que ajusta modelo não-linear
-            fct = W1.3()) #LL.3 = log-logistic de 3 parâmetros
-AIC(drc4.1) #Para comparar diferentes modelos (fct), o W1.3 pode ser melhor para alguns isolados
-plot(drc4.1)
-```
 
 # Análise de Correlação
 
@@ -558,7 +485,6 @@ Como foram obtidas três variáveis respostas a partir do experimento base, alé
 -   Hipótese nula (H0): não há correlação significativa entre as duas variáveis analisadas.
 
 -   Hipótese alternativa (Ha): há uma correlação significativa entre as duas variáveis analisadas.
-
 
 ## Correlação entre Ovos e Massa de Parte Aérea Seca (MPAS)
 
@@ -583,10 +509,9 @@ cor.test(controle$ovos, controle$MPAS)
 
 O p-valor da análise da relação entre as variáveis foi menor do que o nível de significância (0,05), indicando que a hipótese nula deve ser rejeitada. Além disso, a análise de correlação para as variáveis "Ovos" e "MPAS" obteve um coeficiente de correlação de Pearson estimado de 0.44, demonstrando que existe uma correlação fraca positiva entre as duas variáveis, lembrando que para correlação positiva o coeficiente de correlação (r) varia de 0 a 1.
 
-
 ## Correlação entre Ovos e Massa de Raiz Fresca (MRF)
 
-**Visualização gráfica da correlação**: 
+**Visualização gráfica da correlação**:
 
 ```{r}
 controle |> 
@@ -597,7 +522,7 @@ controle |>
 
 Baseando apenas na análise visual do gráfico de dispersão, é possível inferir que existe uma correlação positiva entre as variáveis "Ovos" e "MRF", tendo em vista que a linha de tendência criada pelo `geom_smooth()` tem um perfil ascendente.
 
-**Teste de Correlação**: 
+**Teste de Correlação**:
 
 ```{r}
 cor.test(controle$ovos, controle$MRF)
@@ -605,10 +530,9 @@ cor.test(controle$ovos, controle$MRF)
 
 O p-valor da análise da relação entre as variáveis foi menor do que o nível de significância (0,05), indicando que a hipótese nula deve ser rejeitada. Além disso, a análise de correlação para as variáveis "Ovos" e "MRF" obteve um coeficiente de correlação de Pearson estimado de 0.49, sendo maior que a correlação entre "Ovos" e "MPAS", embora ainda seja considerado uma correlação fraca positiva entre as duas variáveis.
 
-
 ## Correlação entre Massa de Parte Aérea Seca (MPAS) e Massa de Raiz Fresca (MRF)
 
-**Visualização gráfica da correlação**: 
+**Visualização gráfica da correlação**:
 
 ```{r}
 controle |> 
@@ -619,7 +543,7 @@ controle |>
 
 Diferente dos outros dois gráficos, a primeira diferença que é possível de observar é a menor dispersão entre os dados das duas variáveis, o que normalmente indica uma correlação mais forte. Isso também é perceptível pela barra de erros nesse gráfico, sendo mais afunilado se comparado aos outros dois anteriores. Novamente a linha de tendência criada pelo `geom_smooth()` tem um perfil ascendente.
 
-**Teste de Correlação**: 
+**Teste de Correlação**:
 
 ```{r}
 cor.test(controle$MPAS, controle$MRF)
@@ -629,10 +553,9 @@ Novamente o p-valor da análise da relação entre as variáveis foi menor do qu
 
 Essa correlação mais forte entre as variáveis "MPAS" e "MRF" era, na verdade, já esperado por nós, uma vez que biologicamente existe uma correlação forte entre a massa da raiz e a massa da parte aérea, ou seja, já é esperado que uma planta que possua maior biomassa de raiz tenha uma maior biomassa da parte aérea.
 
-
 ## Correlação entre todas as variáveis
 
-É possível visualizar a correlação entre todas as variáveis resposta através de um único gráfico a partir da função ´corgraph()` do pacote `AgroR`. 
+É possível visualizar a correlação entre todas as variáveis resposta através de um único gráfico a partir da função ´corgraph()`do pacote`AgroR\`.
 
 Para isso, é preciso primeiro filtrar apenas os dados das variáveis resposta. A esse conjunto de dados filtrado foi atribuído o nome `controle2`.
 

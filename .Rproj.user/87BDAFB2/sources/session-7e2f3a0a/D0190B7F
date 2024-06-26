@@ -3,7 +3,7 @@
     "path": "~/GitHub/Projeto-Final/Introdução.qmd",
     "project_path": "Introdução.qmd",
     "type": "quarto_markdown",
-    "hash": "0",
+    "hash": "2765853071",
     "contents": "",
     "dirty": false,
     "created": 1719278146078.0,
@@ -15,7 +15,7 @@
         "tempName": "Untitled1",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "10,17",
+        "cursorPosition": "8,211",
         "scrollLine": "0",
         "docOutlineVisible": "1",
         "rmdVisualCollapsedChunks": "",
@@ -23,11 +23,11 @@
         "docOutlineSize": "105"
     },
     "folds": "",
-    "lastKnownWriteTime": 1719283153,
+    "lastKnownWriteTime": 1719374872,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1719283153351,
+    "last_content_update": 1719374872915,
     "read_only": false,
     "read_only_alternatives": []
 }

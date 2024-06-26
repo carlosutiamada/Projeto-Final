@@ -1,0 +1,4 @@
+"0","controle <- read_excel(""Controle biológico.xlsx.xlsx"")
+"
+"2","Error: `path` does not exist: ‘Controle biológico.xlsx.xlsx’
+"
